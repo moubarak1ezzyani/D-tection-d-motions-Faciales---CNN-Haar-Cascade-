@@ -11,11 +11,10 @@ Brief N°5 : CNN (TensorFlow/Keras), Haar Cascade (OpenCV), FastAPI et PostgreSQ
 Ce projet permettra de valider la faisabilité d’un futur produit SaaS, via :
 
 * détecter automatiquement le visage sur une photo,
-  
+
 * prédire l’émotion correspondante,
-  
+
 * enregistrer la prédiction dans une base de données.
-  
 
 **1.Préparation et exploration des données**
 
@@ -39,10 +38,11 @@ Afficher les métriques ***(accuracy, loss)*** et quelques prédictions sur des 
 
 * Charger le classifieur Haar Cascade :
   
-      facecascade = cv2.CascadeClassifier('haarcascadefrontalface_default.xml')
-  
+  ```python
+  facecascade = cv2.CascadeClassifier('haarcascadefrontalface_default.xml')
+  ```
+
 * Extraire la région du visage et la redimensionner à la taille attendue par le CNN.
-  
 
 Sauvegarder un script Python **detect_and_predict.py** qui :
 
@@ -80,30 +80,29 @@ Automatiser les tests avec GitHub Actions
 Modalités d'évaluation
 
 * Modèle CNN correctement entraîné et sauvegardé
-  
+
 * Détection du visage via Haar Cascade opérationnelle.
-  
+
 * API FastAPI fonctionnelle et connectée à PostgreSQL.
-  
+
 * Pipeline clair : Image → Détection → Prédiction → Enregistrement.
-  
+
 * Code organisé, commenté et versionné.
-  
+
 * Tests unitaires présents.
-  
 
 Livrables
 
 * Notebook d’entraînement du CNN.
-  
+
 * Script detect_and_predict.py (OpenCV + CNN).
-  
+
 * API FastAPI (main.py) avec routes /predict_emotion et /history.
-  
+
 * Base PostgreSQL fonctionnelle.
-  
+
 * Tests unitaires + workflow GitHub Actions.
-  
+
 * Documentation (README.md) et requirements.txt.
-  
+
 * Projet versionné sur GitHub.-- Jira
