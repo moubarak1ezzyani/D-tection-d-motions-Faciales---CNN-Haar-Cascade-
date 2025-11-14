@@ -1,108 +1,207 @@
-# D-tection-d-motions-Faciales---CNN-Haar-Cascade-
+Voici une proposition de README.md de niveau professionnel, qui reste claire et précise pour un développeur ayant des bases.
 
-Brief N°5 : CNN (TensorFlow/Keras), Haar Cascade (OpenCV), FastAPI et PostgreSQL
+-----
 
-### Période : (Deux semaines)
+# Détection d’Émotions Faciales (CNN + FastAPI + PostgreSQL)
 
-#### **De** : 03 Novembre 2025
+## 1\. Vue d'ensemble du Projet
 
-#### **à** : 14 Novembre 2025
+Ce projet est un prototype d'API RESTful pour l'analyse de sentiments en temps réel via la Vision par Ordinateur. L'application est capable de recevoir une image, d'y détecter un visage, de prédire l'émotion faciale correspondante à l'aide d'un réseau de neurones convolutif (CNN), et d'historiser ce résultat dans une base de données PostgreSQL pour une analyse ultérieure.
 
-Ce projet permettra de valider la faisabilité d’un futur produit SaaS, via :
+Ce prototype sert de "Preuve de Concept" (PoC) pour des cas d'usage avancés, tels que l'analyse de l'expérience utilisateur (UX) ou l'étude de réactions à des produits.
 
-* détecter automatiquement le visage sur une photo,
+### Fonctionnalités Clés
 
-* prédire l’émotion correspondante,
+  * **Endpoint `POST /predict_emotion/` :** Accepte un upload d'image, effectue la détection et la prédiction, et sauvegarde le résultat.
+  * **Endpoint `GET /history/` :** (Si implémenté) Retourne un historique complet de toutes les prédictions stockées.
+  * **Intégration BDD :** Connexion asynchrone à PostgreSQL via SQLAlchemy pour une persistance des données non bloquante.
+  * **CI/CD :** Pipeline d'intégration continue avec GitHub Actions pour automatiser l'exécution des tests unitaires à chaque `push`.
 
-* enregistrer la prédiction dans une base de données.
+-----
 
-**1.Préparation et exploration des données**
+## 2\. Architecture et Démarche
 
-* Utiliser un dataset d’émotions organisé en **dossiers** nommés par émotion (ex : **happy/, sad/, angry/, surprised/, etc.**).
-* Charger et prétraiter les images avec **tf.keras.utils.image_dataset_from_directory().**
-* **Bonus :** Normaliser, redimensionner et augmenter les images (rotation, zoom, flip).
-* Afficher des exemples d’images et des classes.
+L'application suit un pipeline de traitement clair, de la réception de la requête à la sauvegarde des données.
 
-**2. Entrainement du CNN**
+### Démarche (Pipeline de la Requête)
 
-Créer un CNN avec TensorFlow/Keras :
+Le flux de données pour une prédiction est le suivant :
 
-* Couches Conv2D, MaxPooling2D, Flatten, Dense, Dropout.
-* Optimiseur **adam**, perte **categorical_crossentropy.**
+1.  **Client** envoie une image (`POST /predict_emotion/`).
+2.  **FastAPI** reçoit le fichier et obtient une session de la BDD (via `Depends`).
+3.  **OpenCV** décode l'image et le modèle **Haar Cascade** détecte les coordonnées du visage.
+4.  Le visage est découpé, redimensionné (48x48, gris) et préparé pour le modèle.
+5.  **TensorFlow (CNN)** prédit le vecteur de probabilité des 7 émotions.
+6.  Le score le plus élevé et l'émotion correspondante sont extraits.
+7.  **SQLAlchemy** utilise la session pour insérer la prédiction dans la table PostgreSQL (`await db.commit()`).
+8.  **FastAPI** retourne la réponse JSON (`{"emotion": ..., "score": ...}`).
 
-Entrainer et sauvegarder le modèle.
+### Arborescence du Projet
 
-Afficher les métriques ***(accuracy, loss)*** et quelques prédictions sur des images test.
+La structure du dépôt est organisée pour séparer la configuration, le code source et les tests.
 
-**3. Détection de visages avec OpenCV et Haar Cascade**
+```
+.
+├── .github/workflows/
+│   └── python-ci.yml       # Workflow d'intégration continue (Tests)
+├── src/
+│   ├── __init__.py
+│   ├── main.py             # Logique API (FastAPI), modèles BDD, endpoints
+│   ├── test_unitaire.py    # Tests unitaires (Pytest)
+│   │
+│   ├── my_model_emotion_detection.keras  # Modèle CNN entraîné
+│   └── haarcascade_frontalface_default.xml # Modèle OpenCV
+│
+├── .env                    # Fichier de secrets (LOCAL - ignoré par Git)
+├── .env.example            # Template pour les variables d'environnement
+├── .gitignore
+├── requirements.txt        # Dépendances Python
+└── README.md               # Cette documentation
+```
 
-* Charger le classifieur Haar Cascade :
-  
-  ```python
-  facecascade = cv2.CascadeClassifier('haarcascadefrontalface_default.xml')
-  ```
+-----
 
-* Extraire la région du visage et la redimensionner à la taille attendue par le CNN.
+## 3\. Stack Technique (Technologies et Justifications)
 
-Sauvegarder un script Python **detect_and_predict.py** qui :
+| Technologie | Utilisation | Raison du Choix |
+| :--- | :--- | :--- |
+| **Python 3.11** | Langage principal. | Écosystème mature pour l'IA et le développement web. |
+| **FastAPI** | Framework de l'API REST. | **Asynchrone natif** (haute performance pour les E/S), auto-documentation (Swagger UI), validation de données (Pydantic). |
+| **TensorFlow (Keras)** | Entraînement et prédiction (CNN). | Écosystème complet pour le Deep Learning ; l'API Keras facilite le prototypage rapide de modèles. |
+| **OpenCV (Haar Cascade)** | Détection de visage. | **Légèreté et rapidité**. Extrêmement efficace pour la *détection* (trouver le visage), même sur des CPU. |
+| **PostgreSQL** | Base de données relationnelle. | **Robustesse et scalabilité**. Solution "standard" pour les applications de production nécessitant des écritures fiables. |
+| **SQLAlchemy (AsyncPG)** | ORM (Pont BDD) et Pilote. | SQLAlchemy est l'ORM standard en Python. `AsyncPG` est le pilote asynchrone le plus rapide pour PostgreSQL, s'intégrant parfaitement avec FastAPI. |
+| **Pytest** | Framework de tests unitaires. | Syntaxe simple (`assert`), gestion puissante des "fixtures", et standard de l'industrie pour les tests Python. |
+| **GitHub Actions** | Intégration Continue (CI/CD). | Automatisation des tests directement depuis le dépôt Git, assurant la non-régression du code sur la branche `main`. |
+| **Python-dotenv** | Gestion des secrets. | Meilleure pratique de sécurité pour charger les configurations (identifiants BDD) depuis un fichier `.env` plutôt que de les coder en dur. |
 
-* Charge le modèle CNN,
-* Détecte le visage avec Haar Cascade,
-* Fait la prédiction,
-* Affiche le résultat sur l’image (avec rectangle et label).
+-----
 
-**4. Création de l’API FastAPI**
+## 4\. Guide d'Installation et d'Exécution
 
-Route POST **/predict_emotion** :
+### Prérequis
 
-* Reçoit un fichier image via UploadFile,
-* Utilise OpenCV pour détecter le visage,
-* Passe la région du visage au modèle CNN pour la prédiction,
-* Retourne l’émotion prédite et le score.
+  * Python (version 3.10+ recommandée)
+  * Un serveur PostgreSQL en cours d'exécution (localement ou distant)
+  * Git
 
-Route GET **/history** :
+### Étape 1 : Cloner le Dépôt
 
-* Affiche l’historique des prédictions enregistrées dans la base PostgreSQL.
+```bash
+git clone [URL_HTTPS_DU_DEPOT]
+cd [NOM_DU_DEPOT]
+```
 
-Connexion via SQLAlchemy .
+### Étape 2 : Configurer l'Environnement Virtuel
 
-Chaque prédiction est automatiquement insérée dans la base depuis la route **/predict_emotion.**
+Il est crucial d'isoler les dépendances du projet.
 
-**5. Tests unitaires & GitHub Actions**
+```bash
+# Créer un environnement virtuel
+python -m venv venv
 
-Ajouter des tests unitaires simples :
+# Activer l'environnement
+# Sur Windows (PowerShell/CMD)
+.\venv\Scripts\activate
+# Sur Mac/Linux
+# source venv/bin/activate
+```
 
-* Vérifier que ton modèle est bien sauvegarde et peut etre recharge sans erreur
-* Vérification du format de la prédiction.
+### Étape 3 : Installer les Dépendances
 
-Automatiser les tests avec GitHub Actions
+```bash
+# Mettre à jour pip et installer les paquets
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
 
-Modalités d'évaluation
+### Étape 4 : Configurer la Base de Données et les Secrets
 
-* Modèle CNN correctement entraîné et sauvegardé
+1.  **Base de Données :**
+    Assurez-vous que votre serveur PostgreSQL est actif. Connectez-vous (via `psql` ou `pgAdmin`) et créez une nouvelle base de données.
 
-* Détection du visage via Haar Cascade opérationnelle.
+    ```sql
+    CREATE DATABASE emotion_db;
+    ```
 
-* API FastAPI fonctionnelle et connectée à PostgreSQL.
+2.  **Variables d'Environnement :**
+    Créez un fichier nommé `.env` à la racine du projet (utilisez `.env.example` comme modèle) et remplissez-le avec vos identifiants.
 
-* Pipeline clair : Image → Détection → Prédiction → Enregistrement.
+    ```ini
+    # Fichier: .env
+    DB_USER=postgres
+    DB_PASS=votre_mot_de_passe_secret
+    DB_HOST=localhost
+    DB_NAME=emotion_db
+    ```
 
-* Code organisé, commenté et versionné.
+### Étape 5 : Lancer l'Application
 
-* Tests unitaires présents.
+Le serveur FastAPI est configuré avec un événement `lifespan`. Au démarrage, il se connectera à la base de données et exécutera `Base.metadata.create_all` pour créer automatiquement la table `EmotionTable` si elle n'existe pas.
 
-Livrables
+```bash
+# (En supposant que main.py est dans le dossier 'src')
+uvicorn src.main:app --reload
+```
 
-* Notebook d’entraînement du CNN.
+L'API est maintenant en cours d'exécution sur `http://127.0.0.1:8000`.
 
-* Script detect_and_predict.py (OpenCV + CNN).
+-----
 
-* API FastAPI (main.py) avec routes /predict_emotion et /history.
+## 5\. Documentation des Endpoints
 
-* Base PostgreSQL fonctionnelle.
+L'interface de test interactive (Swagger UI) est disponible à l'adresse :
+**`http://127.0.0.1:8000/docs`**
 
-* Tests unitaires + workflow GitHub Actions.
+### Endpoint Racine
 
-* Documentation (README.md) et requirements.txt.
+  * **`GET /`**
+      * **Description :** Endpoint de "health check" pour vérifier que l'API est en ligne.
+      * **Réponse :** `{"Hello": "World"}`
 
-* Projet versionné sur GitHub.-- Jira
+### Endpoint de Prédiction
+
+  * **`POST /predict_emotion/`**
+      * **Description :** Reçoit une image, analyse l'émotion du visage principal, et sauvegarde le résultat.
+      * **Input (Corps) :** `file` (UploadFile). Formats supportés : JPG, PNG.
+      * **Réponse (Succès 200 OK) :**
+        ```json
+        {
+          "emotion": "happy",
+          "score": 0.954,
+          "saved_id": 42
+        }
+        ```
+      * **Réponses (Erreurs) :**
+          * `400 Bad Request` : Si le format de l'image n'est pas supporté (ex: AVIF, WEBP).
+          * `500 Internal Server Error` : Si aucun visage n'est détecté ou si une autre erreur de traitement survient.
+
+### Endpoint d'Historique
+
+  * **`GET /history/`**
+      * **Description :** (Implémentation requise) Doit retourner la liste de toutes les prédictions stockées dans la table `EmotionTable`.
+
+-----
+
+## 6\. Tests et Intégration Continue
+
+### Tests Unitaires
+
+Le projet utilise `pytest` pour les tests unitaires et d'intégration. Les tests sont configurés pour utiliser une base de données **SQLite en mémoire** (`aiosqlite`) afin d'isoler les tests de la base de données de développement (PostgreSQL).
+
+Pour exécuter les tests localement :
+
+```bash
+pytest
+```
+
+### Intégration Continue (GitHub Actions)
+
+Le workflow défini dans `.github/workflows/python-ci.yml` s'exécute automatiquement à chaque `push` ou `pull request` vers la branche `main`.
+
+Le pipeline CI effectue les étapes suivantes :
+
+1.  Met en place une machine virtuelle Ubuntu.
+2.  Installe Python 3.11.
+3.  Installe toutes les dépendances listées dans `requirements.txt`.
+4.  Exécute `pytest`. (Note : des variables d'environnement factices sont fournies au workflow pour permettre à `main.py` de s'importer sans erreur).
